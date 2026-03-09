@@ -32,14 +32,19 @@
             margin-bottom: 20px;
             font-weight: 500;
         }
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 15px;
+        }
         textarea, input {
             width: 100%;
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
             padding: 12px;
+            padding-left: 45px; 
             border-radius: 8px;
-            margin-bottom: 15px;
             box-sizing: border-box;
             font-size: 16px;
             outline: none;
@@ -52,12 +57,30 @@
             resize: vertical;
             min-height: 100px;
         }
+        .icon-btn {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+            border-radius: 4px;
+        }
+        .icon-btn:hover {
+            color: #4facfe;
+        }
         .btn-group {
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
         }
-        button {
+        .action-btn {
             flex: 1;
             padding: 12px;
             border: none;
@@ -72,13 +95,11 @@
             color: #fff;
         }
         .btn-encrypt:hover { background: #3a8fd9; }
-        
         .btn-decrypt {
             background: #e74c3c;
             color: #fff;
         }
         .btn-decrypt:hover { background: #c0392b; }
-        
         #result {
             background: rgba(0, 0, 0, 0.4);
             word-wrap: break-word;
@@ -88,30 +109,43 @@
 <body>
 
 <div class="container">
-    <h2>أداة التشفير (AES-256-GCM)</h2>
+    <h2>السلامة اولا</h2>
     
-    <textarea id="inputText" placeholder="أدخل النص هنا (عربي أو إنجليزي)..."></textarea>
-    <input type="password" id="secretKey" placeholder="أدخل مفتاح التشفير (كلمة المرور)...">
-    
-    <div class="btn-group">
-        <button class="btn-encrypt" onclick="processText('encrypt')">تشفير النص</button>
-        <button class="btn-decrypt" onclick="processText('decrypt')">فك التشفير</button>
+    <div class="input-wrapper">
+        <textarea id="inputText" placeholder="أدخل النص هنا (عربي أو إنجليزي)..."></textarea>
+        <button class="icon-btn" onclick="pasteText()" title="لصق النص">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+        </button>
+    </div>
+
+    <div class="input-wrapper">
+        <input type="password" id="secretKey" placeholder="أدخل مفتاح التشفير (كلمة المرور)...">
+        <button class="icon-btn" id="eyeIconBtn" onclick="togglePassword()" title="إظهار/إخفاء المفتاح">
+            <svg id="eyeIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
     </div>
     
-    <textarea id="result" placeholder="النتيجة ستظهر هنا..." readonly></textarea>
+    <div class="btn-group">
+        <button class="action-btn btn-encrypt" onclick="processText('encrypt')">تشفير النص</button>
+        <button class="action-btn btn-decrypt" onclick="processText('decrypt')">فك التشفير</button>
+    </div>
+    
+    <div class="input-wrapper" style="margin-bottom: 0;">
+        <textarea id="result" placeholder="النتيجة ستظهر هنا..." readonly></textarea>
+        <button class="icon-btn" id="copyBtn" onclick="copyText()" title="نسخ النتيجة">
+            <svg id="copyIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+    </div>
 </div>
 
 <script>
-    // إعدادات التشفير
     const ITERATIONS = 100000;
     const KEY_LENGTH = 256;
     const HASH_ALGO = "SHA-256";
 
-    // تحويل النص إلى مصفوفة بايتات والعكس
     const enc = new TextEncoder();
     const dec = new TextDecoder();
 
-    // اشتقاق مفتاح قوي من كلمة المرور
     async function getCryptoKey(password, salt) {
         const keyMaterial = await crypto.subtle.importKey(
             "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
@@ -122,7 +156,6 @@
         );
     }
 
-    // دوال المساعدة للتعامل مع Base64
     function bufferToBase64(buffer) {
         return btoa(String.fromCharCode(...new Uint8Array(buffer)));
     }
@@ -136,7 +169,6 @@
         return bytes.buffer;
     }
 
-    // التشفير
     async function encryptData(text, password) {
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -146,7 +178,6 @@
             { name: "AES-GCM", iv: iv }, key, enc.encode(text)
         );
 
-        // دمج الملح + IV + النص المشفر في مصفوفة واحدة
         const combined = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
         combined.set(salt, 0);
         combined.set(iv, salt.length);
@@ -155,17 +186,13 @@
         return bufferToBase64(combined);
     }
 
-    // فك التشفير
     async function decryptData(encryptedBase64, password) {
         const combined = new Uint8Array(base64ToBuffer(encryptedBase64));
-        
-        // استخراج الملح و IV والنص المشفر
         const salt = combined.slice(0, 16);
         const iv = combined.slice(16, 28);
         const data = combined.slice(28);
 
         const key = await getCryptoKey(password, salt);
-        
         const decryptedContent = await crypto.subtle.decrypt(
             { name: "AES-GCM", iv: iv }, key, data
         );
@@ -173,7 +200,6 @@
         return dec.decode(decryptedContent);
     }
 
-    // المعالجة الأساسية للواجهة
     async function processText(action) {
         const text = document.getElementById('inputText').value;
         const key = document.getElementById('secretKey').value;
@@ -192,7 +218,48 @@
             }
         } catch (error) {
             resultBox.value = "خطأ: تأكد من صحة النص المشفر ومفتاح التشفير.";
-            console.error(error);
+        }
+    }
+
+    // وظيفة لصق النص
+    async function pasteText() {
+        try {
+            const text = await navigator.clipboard.readText();
+            document.getElementById('inputText').value = text;
+        } catch (err) {
+            alert("يرجى منح صلاحية الوصول للحافظة أو لصق النص يدوياً.");
+        }
+    }
+
+    // وظيفة نسخ النص
+    async function copyText() {
+        const resultText = document.getElementById('result').value;
+        if (!resultText) return;
+        try {
+            await navigator.clipboard.writeText(resultText);
+            const copyBtn = document.getElementById('copyBtn');
+            const originalIcon = copyBtn.innerHTML;
+            // إظهار علامة صح لثانيتين كدليل على النسخ
+            copyBtn.innerHTML = '<svg width="20" height="20" fill="none" stroke="#4facfe" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalIcon;
+            }, 2000);
+        } catch (err) {
+            alert("فشل نسخ النص تلقائياً.");
+        }
+    }
+
+    // وظيفة إظهار وإخفاء المفتاح
+    function togglePassword() {
+        const pwdInput = document.getElementById('secretKey');
+        const eyeIconBtn = document.getElementById('eyeIconBtn');
+        
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            eyeIconBtn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        } else {
+            pwdInput.type = 'password';
+            eyeIconBtn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
         }
     }
 </script>
