@@ -83,8 +83,40 @@
             border-radius: 8px;
             border: 1px dashed rgba(255, 255, 255, 0.3);
             background: rgba(0,0,0,0.2);
+            cursor: zoom-in; /* يشير للمستخدم أن الصورة قابلة للتكبير */
+            transition: transform 0.2s;
         }
+        #imagePreview:hover { opacity: 0.8; }
+
         .label-text { display: block; margin-bottom: 5px; font-size: 14px; color: #ccc; }
+
+        /* --- تصميم النافذة المنبثقة للتكبير --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            padding-top: 50px;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            cursor: zoom-out;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 85vh;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px; right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -123,11 +155,29 @@
         </button>
     </div>
 
-    <img id="imagePreview" alt="معاينة الصورة">
+    <img id="imagePreview" alt="معاينة الصورة" onclick="openModal()">
+</div>
+
+<div id="myModal" class="modal" onclick="closeModal()">
+    <span class="close-modal">&times;</span>
+    <img class="modal-content" id="fullImage">
 </div>
 
 <script>
-    // عند اختيار صورة، نقوم بتحويلها إلى Base64 ووضعها في النص
+    // --- وظائف المعاينة والتكبير ---
+    function openModal() {
+        const modal = document.getElementById("myModal");
+        const modalImg = document.getElementById("fullImage");
+        const previewImg = document.getElementById("imagePreview");
+        modal.style.display = "block";
+        modalImg.src = previewImg.src;
+    }
+
+    function closeModal() {
+        document.getElementById("myModal").style.display = "none";
+    }
+
+    // --- بقية الكود الأساسي ---
     function handleImageSelect() {
         const file = document.getElementById('imageInput').files[0];
         const reader = new FileReader();
@@ -158,7 +208,7 @@
             if (action === 'encrypt') {
                 const encrypted = CryptoJS.AES.encrypt(data, key);
                 resultBox.value = encrypted.toString();
-                preview.style.display = 'none'; // إخفاء المعاينة عند التشفير
+                preview.style.display = 'none';
             } else {
                 const decrypted = CryptoJS.AES.decrypt(data, key);
                 const originalData = decrypted.toString(CryptoJS.enc.Utf8);
@@ -167,7 +217,6 @@
 
                 resultBox.value = originalData;
 
-                // إذا كانت النتيجة تبدأ بـ data:image فهي صورة، نعرضها
                 if (originalData.startsWith('data:image')) {
                     preview.src = originalData;
                     preview.style.display = 'block';
