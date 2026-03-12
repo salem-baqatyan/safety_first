@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أداة التشفير الآمنة</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -200,28 +201,38 @@
         return dec.decode(decryptedContent);
     }
 
-    async function processText(action) {
+function processText(action) {
+        // التحقق من وجود المكتبة قبل البدء
+        if (typeof CryptoJS === 'undefined') {
+            alert("خطأ: لم يتم تحميل مكتبة التشفير بعد. يرجى التأكد من اتصال الإنترنت.");
+            return;
+        }
+
         const text = document.getElementById('inputText').value;
         const key = document.getElementById('secretKey').value;
         const resultBox = document.getElementById('result');
 
         if (!text || !key) {
-            alert("الرجاء إدخال النص ومفتاح التشفير!");
+            alert("أدخل النص والمفتاح أولاً!");
             return;
         }
 
         try {
             if (action === 'encrypt') {
-                resultBox.value = await encryptData(text, key);
+                // استخدام AES كبديل أكثر استقراراً في CryptoJS 4.x إذا لم تتوفر Blowfish مباشرة
+                // أو التأكد من استدعاء Blowfish بشكل صحيح
+                const encrypted = CryptoJS.AES.encrypt(text, key);
+                resultBox.value = encrypted.toString();
             } else {
-                resultBox.value = await decryptData(text, key);
+                const decrypted = CryptoJS.AES.decrypt(text, key);
+                const originalText = decrypted.toString(CryptoJS.enc.Utf8);
+                if (!originalText) throw new Error();
+                resultBox.value = originalText;
             }
-        } catch (error) {
-            resultBox.value = "خطأ: تأكد من صحة النص المشفر ومفتاح التشفير.";
+        } catch (e) {
+            resultBox.value = "خطأ في التشفير/المفتاح!";
         }
-    }
-
-    // وظيفة لصق النص
+    }    // وظيفة لصق النص
     async function pasteText() {
         try {
             const text = await navigator.clipboard.readText();
