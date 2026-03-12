@@ -178,18 +178,42 @@
     }
 
     // --- بقية الكود الأساسي ---
-    function handleImageSelect() {
-        const file = document.getElementById('imageInput').files[0];
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            document.getElementById('inputText').value = reader.result;
-            const preview = document.getElementById('imagePreview');
-            preview.src = reader.result;
-            preview.style.display = 'block';
-        }
-        if (file) reader.readAsDataURL(file);
-    }
+function handleImageSelect() {
+    const file = document.getElementById('imageInput').files[0];
+    if (!file) return;
 
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            // تحديد أقصى عرض للصورة (مثلاً 800 بكسل) للحفاظ على قصر الكود
+            const MAX_WIDTH = 800;
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // ضغط الصورة بصيغة JPEG وبجودة 0.6 (توازن ممتاز بين الحجم والوضوح)
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            
+            document.getElementById('inputText').value = compressedBase64;
+            const preview = document.getElementById('imagePreview');
+            preview.src = compressedBase64;
+            preview.style.display = 'block';
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
     async function processData(action) {
         if (typeof CryptoJS === 'undefined') {
             alert("المكتبة لم تُحمل بعد!"); return;
